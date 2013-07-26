@@ -38,6 +38,7 @@
         <version.httpclient>4.2.5</version.httpclient>
         <version.commons.io>1.3.2</version.commons.io>
         <version.mockito>1.9.5</version.mockito>
+        <version.shrinkwrap.android>1.0-SNAPSHOT</version.shrinkwrap.android>
     </properties>
 
     <!-- Developers -->
@@ -91,6 +92,11 @@
                 <groupId>commons-io</groupId>
                 <artifactId>commons-io</artifactId>
                 <version>${version.commons.io}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jboss.shrinkwrap</groupId>
+                <artifactId>shrinkwrap-android-depchain</artifactId>
+                <version>${version.shrinkwrap.android}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -193,6 +199,11 @@
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.jboss.shrinkwrap</groupId>
+            <artifactId>shrinkwrap-android-depchain</artifactId>
         </dependency>
     </dependencies>
 

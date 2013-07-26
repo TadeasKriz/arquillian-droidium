@@ -36,9 +36,15 @@ import org.arquillian.droidium.native_.configuration.DroidiumNativeConfiguration
 import org.arquillian.droidium.native_.configuration.Validate;
 import org.arquillian.droidium.native_.exception.SelendroidRebuilderException;
 import org.arquillian.droidium.native_.utils.Command;
+import org.jboss.shrinkwrap.android.api.spec.node.Application;
+import org.jboss.shrinkwrap.android.api.spec.node.Instrumentation;
+import org.jboss.shrinkwrap.android.api.spec.node.UsesLibrary;
+import org.jboss.shrinkwrap.android.api.spec.node.UsesPermission;
+import org.jboss.shrinkwrap.android.api.spec.node.UsesSdk;
 import org.jboss.shrinkwrap.api.Archive;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
+import org.jboss.shrinkwrap.android.api.spec.AndroidManifest;
 
 /**
  * Rebuilds Selendroid application.
@@ -105,19 +111,20 @@ public class SelendroidRebuilder {
     @SuppressWarnings("resource")
     public File rebuild(File selendroidWorkingCopy) {
 
-        File toBeReplacedAndroidManifest = new File(workingDir, "AndroidManifestToBeReplaced.xml");
         File finalAndroidManifest = new File(workingDir, "AndroidManifest.xml");
         File dummyAPK = new File(workingDir, "dummy.apk");
 
         // copying of AndroidManifest.xml from resources of the native plugin to working directory
-        FileOutputStream toBeReplacedAndroidManifestStream;
+        FileOutputStream finalAndroidManifestStream;
         try {
-            toBeReplacedAndroidManifestStream = new FileOutputStream(toBeReplacedAndroidManifest.getAbsoluteFile());
+            finalAndroidManifestStream = new FileOutputStream(finalAndroidManifest.getAbsoluteFile());
         } catch (FileNotFoundException ex) {
             throw new SelendroidRebuilderException();
         }
 
-        InputStream AndroidManifestStream = this.getClass().getClassLoader().getResourceAsStream("AndroidManifest.xml");
+        AndroidManifest androidManifest = createAndroidManifest(applicationBasePackage);
+
+        InputStream AndroidManifestStream = androidManifest.openStream(); // this.getClass().getClassLoader().getResourceAsStream("AndroidManifest.xml");
 
         if (AndroidManifestStream == null) {
             throw new SelendroidRebuilderException("class loader of " + this.getClass().getName() +
@@ -125,15 +132,15 @@ public class SelendroidRebuilder {
         }
 
         try {
-            toBeReplacedAndroidManifestStream.write(IOUtils.toByteArray(AndroidManifestStream));
+            finalAndroidManifestStream.write(IOUtils.toByteArray(AndroidManifestStream));
         } catch (IOException ex) {
-            throw new SelendroidRebuilderException("unable to write to " + toBeReplacedAndroidManifest.getAbsolutePath());
+            throw new SelendroidRebuilderException("unable to write to " + finalAndroidManifest.getAbsolutePath());
         }
 
-        closeStream(toBeReplacedAndroidManifestStream);
+        closeStream(finalAndroidManifestStream);
         closeStream(AndroidManifestStream);
 
-        filterManifestFile(toBeReplacedAndroidManifest, finalAndroidManifest);
+        // filterManifestFile(toBeReplacedAndroidManifest, finalAndroidManifest);
 
         // create dummy package in order to get compiled AndroidManifest.xml
         createDummyAPK(dummyAPK, finalAndroidManifest);
@@ -156,6 +163,30 @@ public class SelendroidRebuilder {
      */
     public void setApplicationBasePackage(String applicationBasePackage) {
         this.applicationBasePackage = applicationBasePackage;
+    }
+
+    private AndroidManifest createAndroidManifest(String targetPackage) {
+        Application application = new Application()
+                .setLabel("Selendroid")
+                .addUsesLibrary(new UsesLibrary().setName("android.test.runner"));
+
+        AndroidManifest manifest = new AndroidManifest();
+        manifest
+                .setApplication(application)
+                .setPackage("io.selendroid")
+                .setVersionCode(1)
+                .setVersionName("0.4.2")
+                .setUsesSdk(new UsesSdk().setMinSdkVersion(10))
+                .addInstrumentation(new Instrumentation()
+                        .setName("io.selendroid.ServerInstrumentation")
+                        .setTargetPackage(targetPackage))
+                .addUsesPermission(new UsesPermission().setName("android.permission.INTERNET"))
+                .addUsesPermission(new UsesPermission().setName("android.permission.WRITE_EXTERNAL_STORAGE"))
+                .addUsesPermission(new UsesPermission().setName("android.permission.ACCESS_MOCK_LOCATION"))
+                .addUsesPermission(new UsesPermission().setName("android.permission.INJECT_EVENTS"))
+                .addUsesPermission(new UsesPermission().setName("android.permission.WAKE_LOCK"));
+
+        return manifest;
     }
 
     /**
